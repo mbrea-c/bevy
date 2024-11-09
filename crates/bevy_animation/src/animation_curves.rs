@@ -224,6 +224,11 @@ where
             _phantom: PhantomData,
         }
     }
+
+    /// Access the inner [`Curve<P>`] value.
+    pub fn get_curve(&self) -> &dyn Curve<P::Property> {
+        &self.curve
+    }
 }
 
 impl<P, C> Clone for AnimatableCurve<P, C>
@@ -344,6 +349,16 @@ where
 #[reflect(from_reflect = false)]
 pub struct TranslationCurve<C>(pub C);
 
+impl<C> TranslationCurve<C>
+where
+    C: AnimationCompatibleCurve<Vec3>,
+{
+    /// Access the inner [`Curve<Vec3>`] value.
+    pub fn get_curve(&self) -> &dyn Curve<Vec3> {
+        &self.0
+    }
+}
+
 /// An [`AnimationCurveEvaluator`] for use with [`TranslationCurve`]s.
 ///
 /// You shouldn't need to instantiate this manually; Bevy will automatically do
@@ -440,6 +455,16 @@ impl AnimationCurveEvaluator for TranslationCurveEvaluator {
 #[derive(Debug, Clone, Reflect, FromReflect)]
 #[reflect(from_reflect = false)]
 pub struct RotationCurve<C>(pub C);
+
+impl<C> RotationCurve<C>
+where
+    C: AnimationCompatibleCurve<Quat>,
+{
+    /// Access the inner [`Curve<Quat>`] value.
+    pub fn get_curve(&self) -> &dyn Curve<Quat> {
+        &self.0
+    }
+}
 
 /// An [`AnimationCurveEvaluator`] for use with [`RotationCurve`]s.
 ///
@@ -538,6 +563,16 @@ impl AnimationCurveEvaluator for RotationCurveEvaluator {
 #[reflect(from_reflect = false)]
 pub struct ScaleCurve<C>(pub C);
 
+impl<C> ScaleCurve<C>
+where
+    C: AnimationCompatibleCurve<Vec3>,
+{
+    /// Access the inner [`Curve<Vec3>`] value.
+    pub fn get_curve(&self) -> &dyn Curve<Vec3> {
+        &self.0
+    }
+}
+
 /// An [`AnimationCurveEvaluator`] for use with [`ScaleCurve`]s.
 ///
 /// You shouldn't need to instantiate this manually; Bevy will automatically do
@@ -634,6 +669,19 @@ impl AnimationCurveEvaluator for ScaleCurveEvaluator {
 #[derive(Debug, Clone, Reflect, FromReflect)]
 #[reflect(from_reflect = false)]
 pub struct WeightsCurve<C>(pub C);
+
+impl<C> WeightsCurve<C>
+where
+    C: IterableCurve<f32> + Debug + Clone + Reflectable,
+{
+    /// Sample the inner curve at a specified time `t`, producing an iterator over sampled values.
+    /// The parameter `t` is clamped to the domain of the curve.
+    // NOTE: We expose this method because [`IterableCurve`] is not object-safe
+    pub fn sample_curve_iter_clamped(&self, t: f32) -> impl Iterator<Item = f32> + use<'_, C> {
+        let t_clamped = self.0.domain().clamp(t);
+        self.0.sample_iter_unchecked(t_clamped)
+    }
+}
 
 #[derive(Reflect)]
 struct WeightsCurveEvaluator {
